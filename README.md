@@ -30,14 +30,6 @@ matching, real push alerts, and a full hospital ops console, all on a free, self
 - 🔐 **Staff Authentication** — Firebase-secured login gates the hospital console; donor registration stays open to the public
 - 📍 **Geo-aware Matching** — Haversine-distance proximity scoring ranks donors by closeness to the requesting hospital
 
-## Quick Start
-
-```bash
-npm run install:all
-npm run dev
-```
-
-Open **http://localhost:5173** — the app runs fully functional out of the box.
 
 ---
 
