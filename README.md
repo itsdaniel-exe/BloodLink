@@ -4,13 +4,15 @@
 
 **An ML-powered emergency blood donation & donor alert platform**
 
-Predicts who's most likely to respond to a blood request — and reaches them first.
+Predicts who's most likely to respond to a blood request, and reaches them first — smart donor
+matching, real push alerts, and a full hospital ops console, all on a free, self-hostable stack.
 
-![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white&style=flat-square)
-![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white&style=flat-square)
-![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white&style=flat-square)
-![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20FCM-FFCA28?logo=firebase&logoColor=black&style=flat-square)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?logo=tailwindcss&logoColor=white&style=flat-square)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?logo=tailwindcss&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20FCM-FFCA28?logo=firebase&logoColor=black)
+![Recharts](https://img.shields.io/badge/Recharts-Data%20Viz-FF6384?logo=chartdotjs&logoColor=white)
 
 </div>
 
@@ -18,43 +20,17 @@ Predicts who's most likely to respond to a blood request — and reaches them fi
 
 ## What it does
 
-When a hospital logs an emergency blood request, BloodLink doesn't just broadcast to every
-donor in the system. It scores each eligible donor's probability of responding — using donation
-history, past response behavior, proximity, and blood-group rarity — and sends targeted alerts
-to the donors most likely to actually show up. The result: faster response times, fewer
-irrelevant notifications, and a system that gets smarter about who to reach.
-
-## ✨ Features
-
-- 🧠 **AI Donor Scoring** — a logistic regression model (sigmoid, 6 engineered features, trained
-  weight vector) predicts each donor's response probability in real time
-- 💬 **GenAI-style Assistant** — a RAG-pattern chatbot answers natural-language questions about
-  donor stats, blood availability, and request urgency, grounded entirely in live data
-- 📊 **Command Hub Dashboard** — blood group distribution, urgency breakdown, donor response
-  rate, and live infrastructure status at a glance
-- 🏆 **Gamification & Leaderboard** — donors earn points and badges (Bronze → Platinum) for
-  donation history and alert responsiveness
+- 🧠 **AI Donor Scoring** — a logistic regression model (sigmoid, 6 engineered features) predicts each donor's response probability in real time
+- 💬 **GenAI-style Assistant** — a RAG-pattern chatbot answers natural-language questions about donor stats and request urgency, grounded entirely in live data
+- 📊 **Command Hub Dashboard** — blood group distribution, urgency breakdown, and donor response rate at a glance
+- 🏆 **Gamification & Leaderboard** — donors earn points and badges from Bronze to Platinum
 - 📈 **Demand Forecasting** — projected blood-unit needs per group with trend indicators
-- 🏥 **Hospital Ops Console** — create emergency requests, manage per-hospital blood inventory,
-  and trigger real-time donor matching + alerts
-- 🔔 **Real Push Notifications** — Firebase Cloud Messaging delivers live alerts to donors'
-  browsers, not just a mock log
-- 🔐 **Staff Authentication** — Firebase-secured login gates the hospital console; donor
-  registration stays open to the public
-- 📍 **Geo-aware Matching** — Haversine-distance proximity scoring ranks donors by how close
-  they are to the requesting hospital
+- 🏥 **Hospital Ops Console** — create emergency requests, manage inventory, and trigger real-time donor matching + alerts
+- 🔔 **Real Push Notifications** — Firebase Cloud Messaging delivers live alerts to donors' browsers, not just a mock log
+- 🔐 **Staff Authentication** — Firebase-secured login gates the hospital console; donor registration stays open to the public
+- 📍 **Geo-aware Matching** — Haversine-distance proximity scoring ranks donors by closeness to the requesting hospital
 
-## 🛠️ Tech Stack
-
-| Layer | Stack |
-|---|---|
-| Frontend | React 18 · Vite · React Router · Tailwind CSS · Recharts |
-| Backend | Node.js · Express |
-| Auth & Notifications | Firebase Authentication · Firebase Cloud Messaging |
-| Machine Learning | Custom logistic regression classifier (pure JavaScript) |
-| Data | JSON-based persistence layer |
-
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 npm run install:all
