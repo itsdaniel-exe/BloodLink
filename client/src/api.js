@@ -1,6 +1,9 @@
 import { auth, firebaseConfigured } from "./firebase.js";
 
-const BASE = "/api";
+// In local dev this stays "/api" and Vite's dev-server proxy (vite.config.js) forwards it to
+// localhost:4000. In production there's no such proxy, so VITE_API_BASE_URL must point at the
+// deployed backend's full origin (e.g. https://bloodlink-api.onrender.com/api).
+const BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
 async function authHeader() {
   if (!firebaseConfigured || !auth?.currentUser) return {};

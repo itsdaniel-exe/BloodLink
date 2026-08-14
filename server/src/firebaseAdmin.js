@@ -39,3 +39,4 @@ if (serviceAccount) {
 export const firebaseEnabled = Boolean(app);
 export const adminAuth = app ? admin.auth(app) : null;
 export const adminMessaging = app ? admin.messaging(app) : null;
+export const adminDb = app ? admin.firestore(app) : null;

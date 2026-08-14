@@ -43,7 +43,7 @@ async function matchAndAlert(request, limit = 25) {
   }
 
   request.donorsAlerted = ranked.length;
-  db.save();
+  await db.save();
   return ranked;
 }
 
@@ -56,75 +56,95 @@ requestsRouter.get("/", (req, res) => {
 // create_blood_request equivalent - also triggers match_donors + send_alerts synchronously.
 // Requires staff sign-in (see requireAuth).
 requestsRouter.post("/", requireAuth, async (req, res) => {
-  const { hospitalId, bloodGroup, unitsNeeded, urgency } = req.body || {};
-  if (!hospitalId || !bloodGroup || !unitsNeeded || !urgency) {
-    return res.status(400).json({ error: "hospitalId, bloodGroup, unitsNeeded and urgency are required" });
-  }
-  const state = db.get();
-  if (!state.hospitals.find((h) => h.id === hospitalId)) {
-    return res.status(400).json({ error: "Unknown hospitalId" });
-  }
-  const request = {
-    id: `req-${nanoid(8)}`,
-    hospitalId,
-    bloodGroup,
-    unitsNeeded: Number(unitsNeeded),
-    urgency,
-    status: "ACTIVE",
-    donorsAlerted: 0,
-    donorsFound: 0,
-    createdAt: new Date().toISOString(),
-  };
-  state.requests.push(request);
-  db.save();
+  try {
+    const { hospitalId, bloodGroup, unitsNeeded, urgency } = req.body || {};
+    if (!hospitalId || !bloodGroup || !unitsNeeded || !urgency) {
+      return res.status(400).json({ error: "hospitalId, bloodGroup, unitsNeeded and urgency are required" });
+    }
+    const state = db.get();
+    if (!state.hospitals.find((h) => h.id === hospitalId)) {
+      return res.status(400).json({ error: "Unknown hospitalId" });
+    }
+    const request = {
+      id: `req-${nanoid(8)}`,
+      hospitalId,
+      bloodGroup,
+      unitsNeeded: Number(unitsNeeded),
+      urgency,
+      status: "ACTIVE",
+      donorsAlerted: 0,
+      donorsFound: 0,
+      createdAt: new Date().toISOString(),
+    };
+    state.requests.push(request);
+    await db.save();
 
-  const ranked = await matchAndAlert(request);
-  request.donorsFound = ranked.length;
-  db.save();
+    const ranked = await matchAndAlert(request);
+    request.donorsFound = ranked.length;
+    await db.save();
 
-  res.status(201).json({ request: withHospital(request), matchedDonors: ranked.length });
+    res.status(201).json({ request: withHospital(request), matchedDonors: ranked.length });
+  } catch (err) {
+    console.error("[requests] create failed:", err);
+    res.status(500).json({ error: "Failed to create request" });
+  }
 });
 
-requestsRouter.patch("/:id", requireAuth, (req, res) => {
-  const state = db.get();
-  const request = state.requests.find((r) => r.id === req.params.id);
-  if (!request) return res.status(404).json({ error: "Request not found" });
-  const { status } = req.body || {};
-  if (status) request.status = status;
-  db.save();
-  res.json(withHospital(request));
+requestsRouter.patch("/:id", requireAuth, async (req, res) => {
+  try {
+    const state = db.get();
+    const request = state.requests.find((r) => r.id === req.params.id);
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    const { status } = req.body || {};
+    if (status) request.status = status;
+    await db.save();
+    res.json(withHospital(request));
+  } catch (err) {
+    console.error("[requests] update failed:", err);
+    res.status(500).json({ error: "Failed to update request" });
+  }
 });
 
 // "Live Alert Ping" - re-broadcast alerts to the currently ranked donor pool for a request
 requestsRouter.post("/:id/ping", requireAuth, async (req, res) => {
-  const state = db.get();
-  const request = state.requests.find((r) => r.id === req.params.id);
-  if (!request) return res.status(404).json({ error: "Request not found" });
-  const ranked = await matchAndAlert(request);
-  request.donorsFound = ranked.length;
-  db.save();
-  res.json({ request: withHospital(request), pinged: ranked.length });
+  try {
+    const state = db.get();
+    const request = state.requests.find((r) => r.id === req.params.id);
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    const ranked = await matchAndAlert(request);
+    request.donorsFound = ranked.length;
+    await db.save();
+    res.json({ request: withHospital(request), pinged: ranked.length });
+  } catch (err) {
+    console.error("[requests] ping failed:", err);
+    res.status(500).json({ error: "Failed to ping donors" });
+  }
 });
 
 // update_donor_response equivalent - a donor confirming from their own alert, no staff login
-requestsRouter.post("/:id/respond", (req, res) => {
-  const state = db.get();
-  const request = state.requests.find((r) => r.id === req.params.id);
-  if (!request) return res.status(404).json({ error: "Request not found" });
-  const { donorId, status } = req.body || {};
-  const donor = state.donors.find((d) => d.id === donorId);
-  if (!donor) return res.status(404).json({ error: "Donor not found" });
+requestsRouter.post("/:id/respond", async (req, res) => {
+  try {
+    const state = db.get();
+    const request = state.requests.find((r) => r.id === req.params.id);
+    if (!request) return res.status(404).json({ error: "Request not found" });
+    const { donorId, status } = req.body || {};
+    const donor = state.donors.find((d) => d.id === donorId);
+    if (!donor) return res.status(404).json({ error: "Donor not found" });
 
-  state.responses.push({
-    id: `resp-${nanoid(8)}`,
-    requestId: request.id,
-    donorId,
-    status: status || "CONFIRMED",
-    respondedAt: new Date().toISOString(),
-  });
-  if (status === "CONFIRMED" || !status) {
-    donor.alertsResponded = (donor.alertsResponded || 0) + 1;
+    state.responses.push({
+      id: `resp-${nanoid(8)}`,
+      requestId: request.id,
+      donorId,
+      status: status || "CONFIRMED",
+      respondedAt: new Date().toISOString(),
+    });
+    if (status === "CONFIRMED" || !status) {
+      donor.alertsResponded = (donor.alertsResponded || 0) + 1;
+    }
+    await db.save();
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error("[requests] respond failed:", err);
+    res.status(500).json({ error: "Failed to record response" });
   }
-  db.save();
-  res.status(201).json({ ok: true });
 });

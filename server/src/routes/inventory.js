@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db.js";
 import { BLOOD_GROUPS } from "../utils.js";
 import { requireAuth } from "../middleware/requireAuth.js";
+import { asyncHandler } from "../asyncHandler.js";
 
 export const inventoryRouter = Router();
 
@@ -20,20 +21,24 @@ inventoryRouter.get("/:hospitalId", (req, res) => {
   res.json({ hospitalId: req.params.hospitalId, levels, minInventoryLevel });
 });
 
-inventoryRouter.put("/:hospitalId", requireAuth, (req, res) => {
-  const state = db.get();
-  if (!state.hospitals.find((h) => h.id === req.params.hospitalId)) {
-    return res.status(404).json({ error: "Unknown hospital" });
-  }
-  const { levels } = req.body || {};
-  if (!levels || typeof levels !== "object") {
-    return res.status(400).json({ error: "levels object is required" });
-  }
-  const sanitized = {};
-  for (const bg of BLOOD_GROUPS) {
-    sanitized[bg] = Math.max(0, Number(levels[bg] ?? state.inventory[req.params.hospitalId]?.[bg] ?? 0));
-  }
-  state.inventory[req.params.hospitalId] = sanitized;
-  db.save();
-  res.json({ hospitalId: req.params.hospitalId, levels: sanitized });
-});
+inventoryRouter.put(
+  "/:hospitalId",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const state = db.get();
+    if (!state.hospitals.find((h) => h.id === req.params.hospitalId)) {
+      return res.status(404).json({ error: "Unknown hospital" });
+    }
+    const { levels } = req.body || {};
+    if (!levels || typeof levels !== "object") {
+      return res.status(400).json({ error: "levels object is required" });
+    }
+    const sanitized = {};
+    for (const bg of BLOOD_GROUPS) {
+      sanitized[bg] = Math.max(0, Number(levels[bg] ?? state.inventory[req.params.hospitalId]?.[bg] ?? 0));
+    }
+    state.inventory[req.params.hospitalId] = sanitized;
+    await db.save();
+    res.json({ hospitalId: req.params.hospitalId, levels: sanitized });
+  })
+);
