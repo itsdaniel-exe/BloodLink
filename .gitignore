@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.env.local
+server/src/data/db.json
+server/serviceAccountKey.json
+npm-debug.log*
