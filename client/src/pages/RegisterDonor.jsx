@@ -7,7 +7,7 @@ import { firebaseConfigured, vapidKey } from "../firebase.js";
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const CITIES = {
-  Pune: { lat: 18.5204, lng: 73.8567 },
+  Puducherry: { lat: 11.9416, lng: 79.8083 },
   Mumbai: { lat: 19.076, lng: 72.8777 },
   Bengaluru: { lat: 12.9716, lng: 77.5946 },
   Delhi: { lat: 28.7041, lng: 77.1025 },
@@ -15,7 +15,7 @@ const CITIES = {
 };
 
 export default function RegisterDonor() {
-  const [form, setForm] = useState({ name: "", bloodGroup: "O+", city: "Pune", phone: "", email: "" });
+  const [form, setForm] = useState({ name: "", bloodGroup: "O+", city: "Puducherry", phone: "", email: "" });
   const [status, setStatus] = useState("idle"); // idle | saving | done | error
   const [error, setError] = useState("");
 
@@ -86,7 +86,7 @@ export default function RegisterDonor() {
             className="input"
             value={form.name}
             onChange={(e) => update("name", e.target.value)}
-            placeholder="e.g. Priya Sharma"
+            placeholder="e.g. Aravind Raj"
           />
         </div>
 
