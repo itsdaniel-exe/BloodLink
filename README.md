@@ -34,27 +34,6 @@ matching, real push alerts, and a full hospital ops console, running entirely on
 - 🔐 **Staff Authentication** — Firebase-secured login gates the hospital console; donor registration stays open to the public
 - 📍 **Geo-aware Matching** — Haversine-distance proximity scoring ranks donors by closeness to the requesting hospital
 
-## Architecture
-
-Runs on Cloudflare Workers with D1 at the edge, so there are no cold starts — the API responds
-in ~0.1s whether or not anyone has used it recently.
-
-```
-React + Vite  ──▶  Cloudflare Workers (Hono)  ──▶  Cloudflare D1
-(Firebase Hosting)         │
-                           ├──▶ Firebase Auth   (staff login, verified via Web Crypto)
-                           └──▶ Firebase FCM    (donor push notifications)
-```
-
-The ML scoring engine and the RAG assistant are plain JavaScript running inside the Worker —
-no external inference API, no per-token cost.
-
 ## Try it
 
 [**bloodlink-18246.web.app**](https://bloodlink-18246.web.app)
-
----
-
-<div align="center">
-<sub>Built as a demonstration of applying machine learning to real-time emergency response systems.</sub>
-</div>
