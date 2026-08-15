@@ -49,16 +49,9 @@ React + Vite  ──▶  Cloudflare Workers (Hono)  ──▶  Cloudflare D1
 The ML scoring engine and the RAG assistant are plain JavaScript running inside the Worker —
 no external inference API, no per-token cost.
 
-## Quick Start
+## Try it
 
-```bash
-npm run install:all
-npm run seed:local
-npm run dev
-```
-
-Open **http://localhost:5173**. See [docs/SETUP.md](docs/SETUP.md) for Firebase configuration
-and deploy steps.
+[**bloodlink-18246.web.app**](https://bloodlink-18246.web.app)
 
 ---
 
