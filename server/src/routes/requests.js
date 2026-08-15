@@ -28,7 +28,11 @@ async function matchAndAlert(request, limit = 25) {
         ? `URGENT BLOOD REQUEST: ${request.bloodGroup} needed at ${hospital?.name}, ${hospital?.city}. Please respond immediately if available to donate.`
         : `${hospital?.name} needs ${request.bloodGroup} blood. Tap to confirm availability.`;
 
-    const push = await sendPush(donor, { title: "🩸 BloodLink Emergency Alert", body: message });
+    const push = await sendPush(donor, {
+      title: "🩸 BloodLink Emergency Alert",
+      body: message,
+      link: `/my/${donor.id}`,
+    });
 
     state.alerts.push({
       id: `alert-${nanoid(8)}`,

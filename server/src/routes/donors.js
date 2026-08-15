@@ -17,6 +17,42 @@ donorsRouter.get("/:id", (req, res) => {
   res.json({ ...donor, eligible: isEligible(donor) });
 });
 
+// Powers the public donor portal (/my/:donorId) - a donor's own alert history, newest first,
+// joined with the request + hospital context and whether they've already responded.
+donorsRouter.get("/:id/alerts", (req, res) => {
+  const state = db.get();
+  const donor = state.donors.find((d) => d.id === req.params.id);
+  if (!donor) return res.status(404).json({ error: "Donor not found" });
+
+  const enriched = state.alerts
+    .filter((a) => a.donorId === req.params.id)
+    .map((alert) => {
+      const request = state.requests.find((r) => r.id === alert.requestId);
+      const hospital = request ? state.hospitals.find((h) => h.id === request.hospitalId) : null;
+      const response = state.responses.find(
+        (r) => r.requestId === alert.requestId && r.donorId === req.params.id
+      );
+      return {
+        ...alert,
+        request: request
+          ? {
+              id: request.id,
+              bloodGroup: request.bloodGroup,
+              urgency: request.urgency,
+              status: request.status,
+              hospitalName: hospital?.name ?? "Unknown Hospital",
+              hospitalCity: hospital?.city,
+            }
+          : null,
+        responded: Boolean(response),
+        responseStatus: response?.status ?? null,
+      };
+    })
+    .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+
+  res.json(enriched);
+});
+
 // register_donor equivalent
 donorsRouter.post(
   "/",

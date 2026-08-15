@@ -18,6 +18,7 @@ export default function RegisterDonor() {
   const [form, setForm] = useState({ name: "", bloodGroup: "O+", city: "Puducherry", phone: "", email: "" });
   const [status, setStatus] = useState("idle"); // idle | saving | done | error
   const [error, setError] = useState("");
+  const [registeredDonorId, setRegisteredDonorId] = useState(null);
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -30,6 +31,7 @@ export default function RegisterDonor() {
     try {
       const { lat, lng } = CITIES[form.city];
       const donor = await api.registerDonor({ ...form, lat, lng });
+      setRegisteredDonorId(donor.id);
       setStatus("done");
 
       // Best-effort: ask for push permission so this donor can receive real emergency
@@ -55,9 +57,13 @@ export default function RegisterDonor() {
           <p className="mb-6 text-xs text-slate-500">
             {firebaseConfigured && vapidKey
               ? "If you allowed notifications, you'll get a push alert when a nearby hospital needs your blood group."
-              : "Push alerts aren't set up on this deployment yet, so you won't get a notification automatically — check the Hospital Requests board instead."}
+              : "Push alerts aren't set up on this deployment yet, so check your status page instead."}
           </p>
-          <Link to="/" className="btn-primary">
+          <Link to={`/my/${registeredDonorId}`} className="btn-primary mb-3 w-full justify-center">
+            📋 View My Status & Alerts
+          </Link>
+          <p className="mb-4 text-xs text-slate-600">Bookmark that link — it's how you'll check for alerts and confirm you can donate.</p>
+          <Link to="/" className="btn-secondary w-full justify-center">
             Back to Home
           </Link>
         </div>

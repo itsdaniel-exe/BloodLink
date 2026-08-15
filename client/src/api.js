@@ -30,7 +30,10 @@ export const api = {
   getHospitals: () => request("/hospitals"),
 
   getDonors: () => request("/donors"),
+  getDonor: (id) => request(`/donors/${id}`),
+  getDonorAlerts: (id) => request(`/donors/${id}/alerts`),
   registerDonor: (donor) => request("/donors", { method: "POST", body: JSON.stringify(donor) }),
+  updateDonor: (id, patch) => request(`/donors/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   saveDonorFcmToken: (donorId, token) =>
     request(`/donors/${donorId}/fcm-token`, { method: "POST", body: JSON.stringify({ token }) }),
 
@@ -40,6 +43,8 @@ export const api = {
   updateRequestStatus: (id, status) =>
     request(`/requests/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }, { auth: true }),
   pingRequest: (id) => request(`/requests/${id}/ping`, { method: "POST" }, { auth: true }),
+  respondToRequest: (requestId, donorId, status) =>
+    request(`/requests/${requestId}/respond`, { method: "POST", body: JSON.stringify({ donorId, status }) }),
 
   getInventory: () => request("/inventory"),
   getHospitalInventory: (hospitalId) => request(`/inventory/${hospitalId}`),
