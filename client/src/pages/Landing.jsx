@@ -65,6 +65,12 @@ export default function Landing() {
             🏥 Log Emergency Request
           </Link>
         </div>
+        <p className="mt-4 text-sm text-slate-500">
+          Already registered?{" "}
+          <Link to="/find-profile" className="text-slate-300 underline hover:text-white">
+            Find your profile
+          </Link>
+        </p>
       </section>
 
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-5 px-6 pb-16 sm:grid-cols-3">

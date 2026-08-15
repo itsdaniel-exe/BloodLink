@@ -52,9 +52,14 @@ export default function DonorPortal() {
           <div className="mb-3 text-4xl">🔍</div>
           <h1 className="mb-2 text-xl font-bold text-white">Couldn't find that donor</h1>
           <p className="mb-6 text-sm text-slate-400">{error}</p>
-          <Link to="/register" className="btn-primary">
-            Register as a Donor
-          </Link>
+          <div className="flex flex-col gap-2">
+            <Link to="/find-profile" className="btn-secondary w-full justify-center">
+              Find My Profile by Phone
+            </Link>
+            <Link to="/register" className="btn-primary w-full justify-center">
+              Register as a Donor
+            </Link>
+          </div>
         </div>
       </div>
     );

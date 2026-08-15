@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar.jsx";
 import Landing from "./pages/Landing.jsx";
 import RegisterDonor from "./pages/RegisterDonor.jsx";
 import DonorPortal from "./pages/DonorPortal.jsx";
+import FindProfile from "./pages/FindProfile.jsx";
 import StaffLogin from "./pages/StaffLogin.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Requests from "./pages/Requests.jsx";
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/register" element={<RegisterDonor />} />
         <Route path="/my/:donorId" element={<DonorPortal />} />
+        <Route path="/find-profile" element={<FindProfile />} />
         <Route path="/staff-login" element={<StaffLogin />} />
         <Route
           path="/dashboard"

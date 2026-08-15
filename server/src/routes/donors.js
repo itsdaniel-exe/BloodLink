@@ -11,6 +11,23 @@ donorsRouter.get("/", (req, res) => {
   res.json(donors.map((d) => ({ ...d, eligible: isEligible(d) })));
 });
 
+function normalizePhone(phone) {
+  return String(phone || "").replace(/\D/g, "").slice(-10);
+}
+
+// Lets a donor recover access to their portal link with just the phone number they registered
+// with - no password to forget. Must be registered before "/:id" or Express would treat
+// "lookup" as an :id value. Returns only the id (not the full profile) to limit what a phone
+// number alone can expose.
+donorsRouter.get("/lookup", (req, res) => {
+  const { phone } = req.query;
+  if (!phone) return res.status(400).json({ error: "phone query param is required" });
+  const target = normalizePhone(phone);
+  const donor = db.get().donors.find((d) => normalizePhone(d.phone) === target && target.length === 10);
+  if (!donor) return res.status(404).json({ error: "No donor found with that phone number." });
+  res.json({ id: donor.id });
+});
+
 donorsRouter.get("/:id", (req, res) => {
   const donor = db.get().donors.find((d) => d.id === req.params.id);
   if (!donor) return res.status(404).json({ error: "Donor not found" });

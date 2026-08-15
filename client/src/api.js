@@ -31,6 +31,7 @@ export const api = {
 
   getDonors: () => request("/donors"),
   getDonor: (id) => request(`/donors/${id}`),
+  findDonorByPhone: (phone) => request(`/donors/lookup?phone=${encodeURIComponent(phone)}`),
   getDonorAlerts: (id) => request(`/donors/${id}/alerts`),
   registerDonor: (donor) => request("/donors", { method: "POST", body: JSON.stringify(donor) }),
   updateDonor: (id, patch) => request(`/donors/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
