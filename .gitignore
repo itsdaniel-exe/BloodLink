@@ -2,7 +2,13 @@ node_modules/
 dist/
 .env
 .env.local
-server/src/data/db.json
-server/serviceAccountKey.json
 .firebase/
 npm-debug.log*
+
+# Cloudflare Workers
+.wrangler/
+worker/.dev.vars
+worker/serviceAccountKey.json
+
+# Firebase service account (never commit)
+serviceAccountKey.json

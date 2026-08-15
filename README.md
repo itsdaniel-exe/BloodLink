@@ -5,14 +5,17 @@
 **An ML-powered emergency blood donation & donor alert platform**
 
 Predicts who's most likely to respond to a blood request, and reaches them first — smart donor
-matching, real push alerts, and a full hospital ops console, all on a free, self-hostable stack.
+matching, real push alerts, and a full hospital ops console, running entirely on free tiers.
+
+[**→ Live demo**](https://bloodlink-18246.web.app)
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=node.js&logoColor=white)
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)
+![Hono](https://img.shields.io/badge/Hono-API-E36002?logo=hono&logoColor=white)
+![D1](https://img.shields.io/badge/D1-SQLite-F38020?logo=cloudflare&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38B2AC?logo=tailwindcss&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20FCM-FFCA28?logo=firebase&logoColor=black)
-![Recharts](https://img.shields.io/badge/Recharts-Data%20Viz-FF6384?logo=chartdotjs&logoColor=white)
 
 </div>
 
@@ -27,9 +30,35 @@ matching, real push alerts, and a full hospital ops console, all on a free, self
 - 📈 **Demand Forecasting** — projected blood-unit needs per group with trend indicators
 - 🏥 **Hospital Ops Console** — create emergency requests, manage inventory, and trigger real-time donor matching + alerts
 - 🔔 **Real Push Notifications** — Firebase Cloud Messaging delivers live alerts to donors' browsers, not just a mock log
+- 👤 **Donor Portal** — every donor gets a personal link to track alerts and confirm availability, recoverable by phone number
 - 🔐 **Staff Authentication** — Firebase-secured login gates the hospital console; donor registration stays open to the public
 - 📍 **Geo-aware Matching** — Haversine-distance proximity scoring ranks donors by closeness to the requesting hospital
 
+## Architecture
+
+Runs on Cloudflare Workers with D1 at the edge, so there are no cold starts — the API responds
+in ~0.1s whether or not anyone has used it recently.
+
+```
+React + Vite  ──▶  Cloudflare Workers (Hono)  ──▶  Cloudflare D1
+(Firebase Hosting)         │
+                           ├──▶ Firebase Auth   (staff login, verified via Web Crypto)
+                           └──▶ Firebase FCM    (donor push notifications)
+```
+
+The ML scoring engine and the RAG assistant are plain JavaScript running inside the Worker —
+no external inference API, no per-token cost.
+
+## Quick Start
+
+```bash
+npm run install:all
+npm run seed:local
+npm run dev
+```
+
+Open **http://localhost:5173**. See [docs/SETUP.md](docs/SETUP.md) for Firebase configuration
+and deploy steps.
 
 ---
 

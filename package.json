@@ -2,11 +2,14 @@
   "name": "bloodlink",
   "private": true,
   "version": "1.0.0",
-  "description": "BloodLink - Serverless, ML-enhanced emergency blood donation and donor alert system (local recreation).",
+  "description": "BloodLink - ML-enhanced emergency blood donation and donor alert system.",
   "scripts": {
-    "install:all": "npm install --prefix server && npm install --prefix client",
-    "dev": "concurrently -n SERVER,CLIENT -c blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "reset-data": "node -e \"require('http').request('http://localhost:4000/api/reset',{method:'POST'},r=>r.on('data',()=>{}).on('end',()=>console.log('reset ok'))).end()\""
+    "install:all": "npm install --prefix worker && npm install --prefix client",
+    "dev": "concurrently -n API,WEB -c blue,magenta \"npm run dev --prefix worker\" \"npm run dev --prefix client\"",
+    "seed:local": "npm run seed:local --prefix worker",
+    "seed:remote": "npm run seed:remote --prefix worker",
+    "deploy:api": "npm run deploy --prefix worker",
+    "deploy:web": "npm run build --prefix client && firebase deploy --only hosting --project bloodlink-18246"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"

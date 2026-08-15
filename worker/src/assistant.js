@@ -2,7 +2,10 @@
 // A RAG pattern built from (1) keyword-based intent classification, (2) live data
 // retrieval, and (3) a four-part Chain-of-Thought response template (context -> finding
 // -> supporting data -> recommendation) - no external LLM API required or used.
-import { db } from "./db.js";
+//
+// Ported from the Express version: identical intents and response templates, but every
+// handler now receives the already-loaded `state` rather than reaching into a module-level
+// store, so it runs statelessly per request on Workers.
 import { BLOOD_GROUPS, BLOOD_GROUP_RARITY, haversineKm, isEligible } from "./utils.js";
 import { scoringDirectory } from "./ml.js";
 
@@ -56,10 +59,9 @@ function findBloodGroup(query) {
   return null;
 }
 
-function findHospital(query) {
-  const { hospitals } = db.get();
+function findHospital(state, query) {
   const q = query.toLowerCase();
-  return hospitals.find((h) => q.includes(h.name.toLowerCase())) || null;
+  return state.hospitals.find((h) => q.includes(h.name.toLowerCase())) || null;
 }
 
 function classify(query) {
@@ -71,8 +73,8 @@ function classify(query) {
   return best.key;
 }
 
-function handleBloodAvailability(query) {
-  const { donors } = db.get();
+function handleBloodAvailability(state, query) {
+  const { donors } = state;
   const bg = findBloodGroup(query);
   const eligibleDonors = donors.filter(isEligible);
 
@@ -98,9 +100,9 @@ function handleBloodAvailability(query) {
   ].join("\n\n");
 }
 
-function handleDonorProximity(query) {
-  const { donors } = db.get();
-  const hospital = findHospital(query) || db.get().hospitals[0];
+function handleDonorProximity(state, query) {
+  const { donors } = state;
+  const hospital = findHospital(state, query) || state.hospitals[0];
   const bg = findBloodGroup(query);
   let pool = donors.filter(isEligible);
   if (bg) pool = pool.filter((d) => d.bloodGroup === bg);
@@ -120,8 +122,8 @@ function handleDonorProximity(query) {
   ].join("\n\n");
 }
 
-function handleUrgencyAnalysis() {
-  const { requests, hospitals } = db.get();
+function handleUrgencyAnalysis(state) {
+  const { requests, hospitals } = state;
   const active = requests.filter((r) => r.status === "ACTIVE");
   const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
   const sorted = [...active].sort((a, b) => order[a.urgency] - order[b.urgency]);
@@ -141,10 +143,10 @@ function handleUrgencyAnalysis() {
   ].join("\n\n");
 }
 
-function handleDonorEligibility(query) {
-  const { donors } = db.get();
+function handleDonorEligibility(state, query) {
+  const { donors } = state;
   const bg = findBloodGroup(query);
-  let pool = bg ? donors.filter((d) => d.bloodGroup === bg) : donors;
+  const pool = bg ? donors.filter((d) => d.bloodGroup === bg) : donors;
   const eligible = pool.filter(isEligible);
   const ineligible = pool.filter((d) => !isEligible(d));
 
@@ -156,8 +158,8 @@ function handleDonorEligibility(query) {
   ].join("\n\n");
 }
 
-function handleRequestHistory() {
-  const { requests } = db.get();
+function handleRequestHistory(state) {
+  const { requests } = state;
   const byMonth = {};
   for (const r of requests) {
     const m = r.createdAt.slice(0, 7);
@@ -170,14 +172,15 @@ function handleRequestHistory() {
     `Analysing ${requests.length} logged blood requests across the request history...`,
     `The most critical finding is: **${fulfilled} of ${requests.length} requests (${rate}%)** have been fully fulfilled.`,
     Object.entries(byMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
       .map(([m, c]) => `• ${m}: ${c} request${c === 1 ? "" : "s"}`)
       .join("\n"),
     `Recommended action: Monitor months with elevated request volume to pre-position inventory and donor outreach.`,
   ].join("\n\n");
 }
 
-function handleBloodGroupRarity() {
-  const { donors } = db.get();
+function handleBloodGroupRarity(state) {
+  const { donors } = state;
   const counts = BLOOD_GROUPS.map((g) => ({
     group: g,
     count: donors.filter((d) => d.bloodGroup === g).length,
@@ -193,34 +196,34 @@ function handleBloodGroupRarity() {
   ].join("\n\n");
 }
 
-function handleResponseRate() {
-  const { alerts, responses, donors } = db.get();
+function handleResponseRate(state) {
+  const { alerts, responses, donors } = state;
   const sent = alerts.length || donors.reduce((s, d) => s + (d.alertsReceived || 0), 0);
   const confirmed =
     responses.filter((r) => r.status === "CONFIRMED").length ||
     donors.reduce((s, d) => s + (d.alertsResponded || 0), 0);
-  const rate = sent ? ((confirmed / sent) * 100).toFixed(1) : "0.0";
+  const rate = sent ? (confirmed / sent) * 100 : 0;
 
   return [
     `Analysing push alert dispatch and donor response tracking...`,
     `📩 Targeting Success Rate:`,
-    `• Alerts Dispatched: ${sent}\n• Confirmed Responses: ${confirmed}\n• AI Optimization Rate: **${rate}%**`,
+    `• Alerts Dispatched: ${sent}\n• Confirmed Responses: ${confirmed}\n• AI Optimization Rate: **${rate.toFixed(1)}%**`,
     `Recommended action: ${rate >= 60 ? "Current targeting strategy is performing well - maintain the 0.60/0.40 probability/proximity ranking weights." : "Consider re-weighting the ranking formula toward proximity to improve response rate."}`,
   ].join("\n\n");
 }
 
-function handleOverallSummary() {
-  const { donors, requests, hospitals, alerts } = db.get();
+function handleOverallSummary(state) {
+  const { donors, requests, hospitals, alerts } = state;
   const eligible = donors.filter(isEligible).length;
   const active = requests.filter((r) => r.status === "ACTIVE").length;
-  const dir = scoringDirectory();
+  const dir = scoringDirectory(state);
   const avgProb = dir.length ? (dir.reduce((s, r) => s + r.probability, 0) / dir.length) * 100 : 0;
 
   return [
     `Analysing ${donors.length} registered donors and ${requests.length} logged requests for a complete system overview...`,
     `The most critical finding is: **${active} active emergenc${active === 1 ? "y" : "ies"}** across ${hospitals.length} partner hospitals.`,
     `• Registered donors: ${donors.length} (${eligible} eligible)\n• Total requests: ${requests.length}\n• Alerts sent: ${alerts.length}\n• Avg. predicted response probability: ${avgProb.toFixed(1)}%`,
-    `Recommended action: Focus donor recruitment on rare blood groups and keep hospital inventory levels above the ${db.get().minInventoryLevel}-unit safety threshold.`,
+    `Recommended action: Focus donor recruitment on rare blood groups and keep hospital inventory levels above the ${state.minInventoryLevel}-unit safety threshold.`,
   ].join("\n\n");
 }
 
@@ -235,33 +238,33 @@ function handleGeneral() {
   ].join("\n");
 }
 
-export function answerQuery(query) {
+export function answerQuery(query, state) {
   const intent = classify(query || "");
   let answer;
   switch (intent) {
     case "BLOOD_AVAILABILITY":
-      answer = handleBloodAvailability(query);
+      answer = handleBloodAvailability(state, query);
       break;
     case "DONOR_PROXIMITY":
-      answer = handleDonorProximity(query);
+      answer = handleDonorProximity(state, query);
       break;
     case "URGENCY_ANALYSIS":
-      answer = handleUrgencyAnalysis();
+      answer = handleUrgencyAnalysis(state);
       break;
     case "DONOR_ELIGIBILITY":
-      answer = handleDonorEligibility(query);
+      answer = handleDonorEligibility(state, query);
       break;
     case "REQUEST_HISTORY":
-      answer = handleRequestHistory();
+      answer = handleRequestHistory(state);
       break;
     case "BLOOD_GROUP_RARITY":
-      answer = handleBloodGroupRarity();
+      answer = handleBloodGroupRarity(state);
       break;
     case "RESPONSE_RATE":
-      answer = handleResponseRate();
+      answer = handleResponseRate(state);
       break;
     case "OVERALL_SUMMARY":
-      answer = handleOverallSummary();
+      answer = handleOverallSummary(state);
       break;
     default:
       answer = handleGeneral();

@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bloodlink-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bloodlink-db",
+      "database_id": "b9af6fe9-5339-4175-bced-8b0f5b382ba0"
+    }
+  ],
+  // Caches Google's public JWKs used to verify Firebase ID tokens, so staff-authenticated
+  // requests don't re-fetch them from Google on every call.
+  "kv_namespaces": [
+    {
+      "binding": "JWK_CACHE",
+      "id": "1a67d61bbb02425db3ea8a1290567c50"
+    }
+  ],
+  "vars": {
+    "FIREBASE_PROJECT_ID": "bloodlink-18246",
+    // Firebase Hosting serves the frontend on both of these domains.
+    "CORS_ORIGIN": "https://bloodlink-18246.web.app,https://bloodlink-18246.firebaseapp.com"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

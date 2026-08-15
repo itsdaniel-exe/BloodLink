@@ -1,10 +1,11 @@
-import { Router } from "express";
-import { db } from "../db.js";
+import { Hono } from "hono";
+import { loadState } from "../db.js";
 import { BLOOD_GROUPS, isEligible } from "../utils.js";
 import { scoringDirectory } from "../ml.js";
-import { firebaseEnabled } from "../firebaseAdmin.js";
+import { isAuthConfigured } from "../auth.js";
+import { isPushConfigured } from "../push.js";
 
-export const dashboardRouter = Router();
+export const dashboardRouter = new Hono();
 
 // Illustrative demand-forecast heuristic (recent request velocity per blood group) - a
 // static, clearly-labelled projection derived from the seeded request mix rather than a
@@ -25,8 +26,10 @@ function badgeFor(points) {
   return "Bronze";
 }
 
-dashboardRouter.get("/", (req, res) => {
-  const { donors, requests, hospitals, alerts, responses } = db.get();
+dashboardRouter.get("/", async (c) => {
+  const state = await loadState(c.env.DB);
+  const { donors, requests, hospitals, alerts, responses } = state;
+
   const eligible = donors.filter(isEligible);
   const active = requests.filter((r) => r.status === "ACTIVE");
   const confirmedResponses = responses.filter((r) => r.status === "CONFIRMED").length;
@@ -47,14 +50,16 @@ dashboardRouter.get("/", (req, res) => {
     count: requests.filter((r) => r.urgency === u).length,
   }));
 
+  const authLive = isAuthConfigured(c.env);
+  const pushLive = isPushConfigured(c.env);
   const infrastructure = [
-    { category: "DATABASE", service: "Local JSON store (file-based)" },
-    { category: "COMPUTE", service: "Node.js + Express (self-hosted, free)" },
-    { category: "NOTIFICATIONS", service: firebaseEnabled ? "Firebase Cloud Messaging (live)" : "Firebase Cloud Messaging (not configured)" },
+    { category: "DATABASE", service: "Cloudflare D1 (SQLite at the edge)" },
+    { category: "COMPUTE", service: "Cloudflare Workers (no cold starts)" },
+    { category: "NOTIFICATIONS", service: pushLive ? "Firebase Cloud Messaging (live)" : "Firebase Cloud Messaging (not configured)" },
     { category: "ML", service: "Custom logistic regression (pure JS)" },
-    { category: "API", service: "Express REST API" },
-    { category: "AUTH", service: firebaseEnabled ? "Firebase Authentication (live)" : "Firebase Authentication (not configured)" },
-    { category: "MONITORING", service: "Server console logs" },
+    { category: "API", service: "Hono REST API on Workers" },
+    { category: "AUTH", service: authLive ? "Firebase Authentication (live)" : "Firebase Authentication (not configured)" },
+    { category: "MONITORING", service: "Workers Observability" },
   ];
 
   const leaderboard = [...donors]
@@ -65,10 +70,10 @@ dashboardRouter.get("/", (req, res) => {
     .sort((a, b) => b.points - a.points)
     .slice(0, 5);
 
-  const dir = scoringDirectory();
+  const dir = scoringDirectory(state);
   const avgPredictedScore = dir.length ? (dir.reduce((s, r) => s + r.probability, 0) / dir.length) * 100 : 0;
 
-  res.json({
+  return c.json({
     stats: {
       registeredDonors: donors.length,
       currentlyEligible: eligible.length,

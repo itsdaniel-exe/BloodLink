@@ -3,8 +3,11 @@
 // features), trained conceptually via SGD (150 epochs, lr=0.01, L2=0.01) on historical
 // donor response data. The weight vector below stands in for what a real training run
 // would produce - see the project report for the original feature/weight design.
+//
+// Ported from the Express version: identical maths, but every entry point now takes the
+// already-loaded `state` instead of reaching into a module-level store, so it runs
+// statelessly per request on Workers.
 import { BLOOD_GROUP_RARITY, DONOR_COMPATIBILITY, clamp01, daysSince, haversineKm, isEligible } from "./utils.js";
-import { db } from "./db.js";
 
 const MAX_DONATIONS = 20;
 const PROXIMITY_WINDOW_KM = 50;
@@ -57,7 +60,7 @@ function nearestHospital(donor, hospitals) {
   return { hospital: best, distanceKm: bestDist };
 }
 
-export function computeFeatures(donor, hospital) {
+export function computeFeatures(donor, hospital, hospitals = []) {
   const sinceLast = daysSince(donor.lastDonationDate);
   const recency = sinceLast === null ? 0.5 : clamp01(1 - sinceLast / RECENCY_WINDOW_DAYS);
   const donations = clamp01(donor.totalDonations / MAX_DONATIONS);
@@ -67,9 +70,9 @@ export function computeFeatures(donor, hospital) {
   let distanceKm = 10;
   let targetHospital = hospital;
   if (!targetHospital) {
-    const { hospital: nearest, distanceKm: dist } = nearestHospital(donor, db.get().hospitals);
+    const { hospital: nearest, distanceKm: dist } = nearestHospital(donor, hospitals);
     targetHospital = nearest;
-    distanceKm = dist;
+    distanceKm = Number.isFinite(dist) ? dist : 10;
   } else {
     distanceKm = haversineKm(donor.lat, donor.lng, hospital.lat, hospital.lng);
   }
@@ -90,8 +93,8 @@ export function computeFeatures(donor, hospital) {
   };
 }
 
-export function predict(donor, hospital) {
-  const f = computeFeatures(donor, hospital);
+export function predict(donor, hospital, hospitals = []) {
+  const f = computeFeatures(donor, hospital, hospitals);
   const { w0, w1, w2, w3, w4, w5, w6 } = MODEL_WEIGHTS;
   const z =
     w0 +
@@ -107,45 +110,40 @@ export function predict(donor, hospital) {
   return { probability, rankScore, label, features: f };
 }
 
-export function scoreDonor(donorId, hospitalId) {
-  const { donors, hospitals } = db.get();
-  const donor = donors.find((d) => d.id === donorId);
+export function scoreDonor(state, donorId, hospitalId) {
+  const donor = state.donors.find((d) => d.id === donorId);
   if (!donor) return null;
-  const hospital = hospitalId ? hospitals.find((h) => h.id === hospitalId) : null;
-  const result = predict(donor, hospital);
-  return { donor, ...result };
+  const hospital = hospitalId ? state.hospitals.find((h) => h.id === hospitalId) : null;
+  return { donor, ...predict(donor, hospital, state.hospitals) };
 }
 
-export function rankDonors({ bloodGroup, hospitalId }) {
-  const { donors, hospitals } = db.get();
-  const hospital = hospitals.find((h) => h.id === hospitalId) || null;
-  const candidates = donors.filter(
+export function rankDonors(state, { bloodGroup, hospitalId }) {
+  const hospital = state.hospitals.find((h) => h.id === hospitalId) || null;
+  const candidates = state.donors.filter(
     (d) => isEligible(d) && DONOR_COMPATIBILITY[d.bloodGroup]?.includes(bloodGroup)
   );
   return candidates
-    .map((d) => ({ donor: d, ...predict(d, hospital) }))
+    .map((d) => ({ donor: d, ...predict(d, hospital, state.hospitals) }))
     .sort((a, b) => b.rankScore - a.rankScore);
 }
 
-export function batchScore({ bloodGroup }) {
-  const { donors } = db.get();
-  const candidates = bloodGroup ? donors.filter((d) => d.bloodGroup === bloodGroup) : donors;
+export function batchScore(state, { bloodGroup }) {
+  const candidates = bloodGroup ? state.donors.filter((d) => d.bloodGroup === bloodGroup) : state.donors;
   return candidates
-    .map((d) => ({ donor: d, ...predict(d, null) }))
+    .map((d) => ({ donor: d, ...predict(d, null, state.hospitals) }))
     .sort((a, b) => b.probability - a.probability);
 }
 
-export function scoringDirectory() {
-  const { donors } = db.get();
-  return donors
-    .map((d) => ({ donor: d, ...predict(d, null) }))
+export function scoringDirectory(state) {
+  return state.donors
+    .map((d) => ({ donor: d, ...predict(d, null, state.hospitals) }))
     .sort((a, b) => b.probability - a.probability);
 }
 
-export function modelSnapshot() {
-  const dir = scoringDirectory();
+export function modelSnapshot(state) {
+  const dir = scoringDirectory(state);
   const avgScore = dir.reduce((sum, r) => sum + r.probability, 0) / (dir.length || 1);
-  const samples = db.get().donors.reduce((sum, d) => sum + (d.alertsReceived || 0), 0);
+  const samples = state.donors.reduce((sum, d) => sum + (d.alertsReceived || 0), 0);
   return {
     ...MODEL_META,
     weights: MODEL_WEIGHTS,

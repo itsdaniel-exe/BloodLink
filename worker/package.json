@@ -1,0 +1,25 @@
+{
+  "name": "bloodlink-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BloodLink API - Cloudflare Worker (Hono + D1), with Firebase Auth verification and FCM push",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "seed:local": "wrangler d1 execute bloodlink-db --local --file ./sql/schema.sql && wrangler d1 execute bloodlink-db --local --file ./sql/seed.sql",
+    "seed:remote": "wrangler d1 execute bloodlink-db --remote --file ./sql/schema.sql && wrangler d1 execute bloodlink-db --remote --file ./sql/seed.sql",
+    "gen:seed": "node scripts/generate-seed-sql.mjs"
+  },
+  "dependencies": {
+    "firebase-auth-cloudflare-workers": "^2.0.6",
+    "hono": "^4.13.2"
+  },
+  "devDependencies": {
+    "wrangler": "^4.123.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20260811.1": true
+  }
+}
